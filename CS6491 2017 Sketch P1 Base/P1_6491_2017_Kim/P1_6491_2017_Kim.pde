@@ -21,103 +21,160 @@ void setup() {               // executed once at the begining
   P.loadPts("data/pts");
 }
 
+color[] arcColors;
+
+
 //**************************** display current frame ****************************
 void draw() {      // executed at each frame
   background(white); // clear screen and paints white background
   if(snapPic) beginRecord(PDF,PicturesOutputPath+"/P"+nf(pictureCounter++,3)+".pdf"); // start recording for PDF image capture
   if(animating) {t+=0.01; if(t>=1) {t=1; animating=false;}} 
 
-  pt S=P.G[0], E=P.G[1], L=P.G[2], R=P.G[3]; // named points defined for convenience
-  strokeWeight(3);
-  stroke(black); edge(S,L); edge(E,R);
-  float s=d(S,L), e=d(E,R); // radii of control circles computged from distances
-  CIRCLE Cs = C(S,s), Ce = C(E,e); // declares circles
+  pt A=P.G[0], B=P.G[1], C=P.G[2], D=P.G[3], E=P.G[4], F=P.G[5];// named points defined for convenience
   
-  if (!b1) {
-    stroke(dgreen); Cs.drawCirc(); stroke(red); Ce.drawCirc(); // draws both circles in green and red
-  }
+  // Create Bi-Arcs with tangent points
+  ARC[] arcs = getBiArcs(P);
+  arcColors = new color[arcs.length];
+  arcColors[0] = red;
+  arcColors[1] = yellow;
+  arcColors[2] = green;
+  arcColors[3] = cyan;
+  arcColors[4] = blue;
+  arcColors[5] = magenta;
+
   
-  
-  // Points to create caplets
-  pts LHat = getTangentPoints(S, E, L, R);
-  pts RHat = getTangentPoints(E, S, R, L);
-  
-  int nn = numPerimeterPts/4;
-  // Code for part 1: 4 arc perimeter points used in b1
-  pts SArc     = getArcClockPts(RHat.G[2], S, LHat.G[0], nn);
-  pts EArc     = getArcClockPts(LHat.G[2], E, RHat.G[0], nn);
-  pts greyPts  = getCircleArcInHat(LHat.G[0], LHat.G[1], LHat.G[2], nn);
-  pts brownPts = getCircleArcInHat(RHat.G[0], RHat.G[1], RHat.G[2], nn);
-  
-  // this code draws part 1
-  if(b1) {  
-    // code for part 1 is above
-    strokeWeight(5);
-    beginShape();
-      fill(comboTan);
-      noStroke();
-      for (int i = 0; i < SArc.nv; ++i)     v(SArc.G[i]);
-      for (int i = 0; i < greyPts.nv; ++i)  v(greyPts.G[i]);
-      for (int i = 0; i < EArc.nv; ++i)     v(EArc.G[i]);
-      for (int i = 0; i < brownPts.nv; ++i) v(brownPts.G[i]);
-    endShape();
-    noFill();
-    
-    stroke(dgreen); SArc.drawCurve();
-    stroke(red);    EArc.drawCurve();
-    stroke(grey);   greyPts.drawCurve();
-    stroke(brown);  brownPts.drawCurve();
-    noStroke();
-  }
-    
-    
-  // Code for part 2: Exact Medial Axis M of W.  This assumes appropriate user input
-  pt B = getMedialAxis(R, V(E,R), S, s);
-  pt G = getMedialAxis(L, V(S,L), E, e);
-  
-  float angleInBetween = angle(RHat.G[0], B, RHat.G[2]);  // asumming acut angle
-  float stepAngle = angleInBetween/(nn-1);
-  float gl = (d(G, E) < d(G, LHat.G[2])) ? -d(G, LHat.G[2]) : d(G, LHat.G[2]); // sign is important.  same sign or different sign d value  
-  
-  // Medial Axis points
-  pts medialAxisPts = new pts();
-  medialAxisPts.declare();
-  for (int i = 0; i < nn; ++i) {
-    vec BR = V(B, R);
-    vec RE = V(R, E);
-    float re = (dot(BR, RE) >= 0) ? d(R, E) : -d(R, E);
-    BR.rotateBy(i*stepAngle);
-    pt RR = P(B).add(BR);
-    RE = U(BR).scaleBy(re);    // RE always points to E
-    medialAxisPts.addPt(getMedialAxis(RR, RE, G, gl));
-  }
-  
-  // This code draws part 2
-  if(b2) {
-    // your code for part 2 is above    
-    strokeWeight(5);
-    stroke(magenta);
-    medialAxisPts.drawCurve();
-  }
-  
-  
-  // Code for part 3 Extra: Uniform Arc Transversals
-  if(b3) {
-    stroke(yellow);   strokeWeight(2);
-    for (int i = 0; i < nn; ++i) {
-      getCircleArcInHat(brownPts.G[i], medialAxisPts.G[i], greyPts.G[nn-1-i], 15).drawCurve();
-    }
-    
-    for (int i = 0; i < nn/2; ++i) {
-      getCircleArcInHat(SArc.G[i], S, SArc.G[nn-1-i], 15).drawCurve();
-      getCircleArcInHat(EArc.G[i], E, EArc.G[nn-1-i], 15).drawCurve();
+  if (b1) {
+    for (int i = 0; i < arcs.length; ++i) {
+      stroke(arcColors[i%6]);
+      arcs[i].drawArc();
+      pt ap = arcs[i].center;
+      //if (isInsideArcs(ap, arcs)) {
+        arcs[i].showCenter();        
+      //}
     }
   }
+  
+  // Find Medial Axis
+  for (int ai = 0; ai < arcs.length/2; ++ai) {
+  //for (int ai = 0; ai < 1; ++ai) {
+    ARC currArc = arcs[ai];
+    pts currArcPoints = currArc.arcPoints;
+    for (int pi = 0; pi < currArc.arcPoints.nv; ++pi) {
+    //for (int pi = 3; pi < 4; ++pi) {
+      pt currPt = currArcPoints.G[pi];
+      vec T0 = V(currArc.center, currPt);
+      getMedialAxisFromArcs(currPt, T0, arcs, ai);
+    }
+  }
+  
+
+  
+  //if (isInsideArcs(P(mouseX, mouseY), arcs)) {
+  //  show(P(mouseX, mouseY), 10); 
+  //}
+  
+  
+  //pt origin = arcs[0].center;
+  //vec ray = V(1,1);
+  //for (int i = 0; i < arcs.length; ++i) {
+  //  stroke(arcColors[i%6]);
+  //    //arcs[i].drawArc();
+  //  intersectsArc(origin, ray, arcs[i]);
+  //}
+  
+
+
+
+  /*
+    Find centers of all bi-arcs (12 in total)
+      for all points on arc, find medial axis point from all other arcs
+        find which one
+          - is within the boundary
+          - has closest distance
+  */
+  
+  
+  
+  //// Points to create caplets
+  //pts LHat = getTangentPoints(S, E, L, R);
+  //pts RHat = getTangentPoints(E, S, R, L);
+  
+  //int nn = numPerimeterPts/4;
+  //// Code for part 1: 4 arc perimeter points used in b1
+  //pts SArc     = getArcClockPts(RHat.G[2], S, LHat.G[0], nn);
+  //pts EArc     = getArcClockPts(LHat.G[2], E, RHat.G[0], nn);
+  //pts greyPts  = getCircleArcInHat(LHat.G[0], LHat.G[1], LHat.G[2], nn);
+  //pts brownPts = getCircleArcInHat(RHat.G[0], RHat.G[1], RHat.G[2], nn);
+  
+  //// this code draws part 1
+  //if(b1) {  
+  //  // code for part 1 is above
+  //  strokeWeight(5);
+  //  beginShape();
+  //    fill(comboTan);
+  //    noStroke();
+  //    for (int i = 0; i < SArc.nv; ++i)     v(SArc.G[i]);
+  //    for (int i = 0; i < greyPts.nv; ++i)  v(greyPts.G[i]);
+  //    for (int i = 0; i < EArc.nv; ++i)     v(EArc.G[i]);
+  //    for (int i = 0; i < brownPts.nv; ++i) v(brownPts.G[i]);
+  //  endShape();
+  //  noFill();
+    
+  //  stroke(dgreen); SArc.drawCurve();
+  //  stroke(red);    EArc.drawCurve();
+  //  stroke(grey);   greyPts.drawCurve();
+  //  stroke(brown);  brownPts.drawCurve();
+  //  noStroke();
+  //}
+    
+    
+  //// Code for part 2: Exact Medial Axis M of W.  This assumes appropriate user input
+  //pt B = getMedialAxis(R, V(E,R), S, s);
+  //pt G = getMedialAxis(L, V(S,L), E, e);
+  
+  //float angleInBetween = angle(RHat.G[0], B, RHat.G[2]);  // asumming acut angle
+  //float stepAngle = angleInBetween/(nn-1);
+  //float gl = (d(G, E) < d(G, LHat.G[2])) ? -d(G, LHat.G[2]) : d(G, LHat.G[2]); // sign is important.  same sign or different sign d value  
+  
+  //// Medial Axis points
+  //pts medialAxisPts = new pts();
+  //medialAxisPts.declare();
+  //for (int i = 0; i < nn; ++i) {
+  //  vec BR = V(B, R);
+  //  vec RE = V(R, E);
+  //  float re = (dot(BR, RE) >= 0) ? d(R, E) : -d(R, E);
+  //  BR.rotateBy(i*stepAngle);
+  //  pt RR = P(B).add(BR);
+  //  RE = U(BR).scaleBy(re);    // RE always points to E
+  //  medialAxisPts.addPt(getMedialAxis(RR, RE, G, gl));
+  //}
+  
+  //// This code draws part 2
+  //if(b2) {
+  //  // your code for part 2 is above    
+  //  strokeWeight(5);
+  //  stroke(magenta);
+  //  medialAxisPts.drawCurve();
+  //}
+  
+  
+  //// Code for part 3 Extra: Uniform Arc Transversals
+  //if(b3) {
+  //  stroke(yellow);   strokeWeight(2);
+  //  for (int i = 0; i < nn; ++i) {
+  //    getCircleArcInHat(brownPts.G[i], medialAxisPts.G[i], greyPts.G[nn-1-i], 15).drawCurve();
+  //  }
+    
+  //  for (int i = 0; i < nn/2; ++i) {
+  //    getCircleArcInHat(SArc.G[i], S, SArc.G[nn-1-i], 15).drawCurve();
+  //    getCircleArcInHat(EArc.G[i], E, EArc.G[nn-1-i], 15).drawCurve();
+  //  }
+  //}
    
   strokeWeight(3);
   
   noFill(); stroke(black); P.draw(white); // paint empty disks around each control point
-  fill(black); label(S,V(-1,-2),"S"); label(E,V(-1,-2),"E"); label(L,V(-1,-2),"L"); label(R,V(-1,-2),"R"); noFill(); // fill them with labels
+  fill(black); label(A,V(-1,-2),"A"); label(B,V(-1,-2),"B"); label(C,V(-1,-2),"C"); label(D,V(-1,-2),"D"); label(E,V(-1,-2),"E"); label(F,V(-1,-2),"F"); noFill(); // fill them with labels
   
   if(snapPic) {endRecord(); snapPic=false;} // end saving a .pdf of the screen
 

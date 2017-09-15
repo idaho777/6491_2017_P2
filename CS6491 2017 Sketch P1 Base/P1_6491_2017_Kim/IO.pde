@@ -18,12 +18,15 @@ void keyPressed() { // executed each time a key is pressed: sets the "keyPressed
 }
 
 void mousePressed() {  // executed when the mouse is pressed
+  if (keyPressed) {
+    if (key=='a') P.addPt(mouseX, mouseY); 
+  }
   P.pickClosest(Mouse()); // used to pick the closest vertex of C to the mouse
   change=true;
 }
 
 void mouseDragged() {
-  if (!keyPressed || (key=='a')) P.dragPicked();   // drag selected point with mouse
+  if (!keyPressed || (key=='d')) P.dragPicked();   // drag selected point with mouse
   if (keyPressed) {
     if (key=='.') t+=2.*float(mouseX-pmouseX)/width;  // adjust current frame   
     if (key=='t') P.dragAll(); // move all vertices
