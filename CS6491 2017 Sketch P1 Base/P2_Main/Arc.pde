@@ -6,6 +6,7 @@ class ARC
     pt center;
     pt hatCenter;
     float r = 0;
+    color colour = white;
     ARC () {}
     ARC(pt C, pt H, pts points) {
       center = C;
@@ -13,6 +14,6 @@ class ARC
       arcPoints = points;
       r = d(C, points.G[0]);
     } 
-    void drawArc() {arcPoints.drawCurve();}
-    void showCenter() {show(center);}
+    void drawArc() {stroke(colour); arcPoints.drawCurve();}
+    void showCenter() {stroke(colour); show(center);}
   } //*********** END ARC CLASS
