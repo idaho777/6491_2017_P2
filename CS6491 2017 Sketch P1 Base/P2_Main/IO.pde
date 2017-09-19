@@ -13,6 +13,9 @@ void keyPressed() { // executed each time a key is pressed: sets the "keyPressed
   if(key=='2') b2=!b2;
   if(key=='3') b3=!b3;
   if(key=='4') b4=!b4;
+  if(key=='5') b5=!b5;
+  if(key=='6') b6=!b6;
+  if(key=='0') b0=!b0;
   if(key=='Q') exit();  // quit application
   change=true; // to make sure that we save a movie frame each time something changes
 }
@@ -26,8 +29,11 @@ void mousePressed() {  // executed when the mouse is pressed
 }
 
 void mouseDragged() {
-  if (!keyPressed || (key=='d')) P.dragPicked();   // drag selected point with mouse
+  if (!keyPressed || (key=='d')) {
+    P.dragPicked();   // drag selected point with mouse
+  }
   if (keyPressed) {
+    println(key);
     if (key=='.') t+=2.*float(mouseX-pmouseX)/width;  // adjust current frame   
     if (key=='t') P.dragAll(); // move all vertices
     if (key=='r') P.rotateAllAroundCentroid(Mouse(),Pmouse()); // turn all vertices around their center of mass

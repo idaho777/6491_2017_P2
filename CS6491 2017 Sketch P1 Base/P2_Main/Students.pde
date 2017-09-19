@@ -24,10 +24,10 @@ ARC[] getBiArcs(pts points) {
   ARC[] arcs = new ARC[2*points.nv];
   
   // Finds all tangents
-  vec[] tangents = getPointTangents(P);
+  vec[] tangents = getPointTangents(points);
   stroke(black);
   for (int i = 0; i < tangents.length; ++i) {
-    arrow(P.G[i], 100, tangents[i]);
+    arrow(points.G[i], 100, tangents[i]);
   }
   
   // Finds all bi-arcs parameters for ArcHat method
@@ -119,12 +119,20 @@ int intersectsArc(pt p, vec ray, ARC arc) {
 // Get medial snake
 // From start to end point, return an Nx3 array of medial axis points
 // [P, medial, PHat]
-pt[][] getMedialSnake(int startMArcIndex, int endMArcIndex, ARC[] inArcs, ARC[] opArcs) {
+pt[][] getMedialSnake(int startMArcIndex, int endMArcIndex, ARC[] inArcs, ARC[] opArcs, ARC[] g_arcs) {
   List<pt[]> snake = new ArrayList<pt[]>();
 
+  int arcsInBetween = 0;
+  if (endMArcIndex > startMArcIndex) {
+    arcsInBetween = endMArcIndex - startMArcIndex - 1;
+  } else {
+    arcsInBetween = g_arcs.length - startMArcIndex + endMArcIndex - 1;
+  }
+
+  int arcSteps = arcsInBetween;
   // Add Head
   ARC startArc = g_arcs[startMArcIndex];
-  for (int i = 0; i < ARC_POINTS/2; ++i) {
+  for (int i = 1; i < ARC_POINTS/2; i += 6) {
     pt[] curr = new pt[3];
     curr[2] = startArc.arcPoints.G[i];
     curr[1] = startArc.center;
@@ -142,28 +150,32 @@ pt[][] getMedialSnake(int startMArcIndex, int endMArcIndex, ARC[] inArcs, ARC[] 
     vec ZC = V(currArcPoints.G[0], currArc.center);
     if (det(tang, ZC) >= 0) towardRight = -1;
     
-    for (int pi = 0; pi < currArcPoints.nv - 1; ++pi) {
-      pt p = currArcPoints.G[pi];
-      vec T0 = V(currArc.center, p).scaleBy(towardRight);
-  
-      pt[] triplet = getMedialAxisTripletFromArcs(p, T0, opArcs);
-      if (triplet != null) 
-        snake.add(triplet);
+    for (int pi = 0; pi < currArcPoints.nv; pi += arcSteps) {
+      int tries = 0;
+      while (tries < arcSteps) {
+        pt p = currArcPoints.G[pi + tries];
+        vec T0 = V(currArc.center, p).scaleBy(towardRight);
+    
+        pt[] triplet = getMedialAxisTripletFromArcs(p, T0, opArcs, g_arcs);
+        if (triplet != null) {
+          snake.add(triplet);
+          break;
+        } else {
+          tries++;
+        }
+      }
     }
   }
-
   
   // Add Tail
   ARC endArc = g_arcs[endMArcIndex];
-  for (int i = 0; i < ARC_POINTS/2; ++i) {
+  for (int i = 1; i < ARC_POINTS/2; i += 6) {
     pt[] curr = new pt[3];
     curr[0] = endArc.arcPoints.G[i];
     curr[1] = endArc.center;
     curr[2] = endArc.arcPoints.G[ARC_POINTS - 1 - i];
     snake.add(curr);
   }
-
-
 
   pt[][] ret = snake.toArray(new pt[snake.size()][3]);
   return ret;
@@ -173,7 +185,7 @@ pt[][] getMedialSnake(int startMArcIndex, int endMArcIndex, ARC[] inArcs, ARC[] 
 
 // Get best medial axis point sampled from inArcs to opArcs
 int casd = 0;
-pt[] getMedialAxisTripletFromArcs(pt p, vec T0, ARC[] opArcs) {
+pt[] getMedialAxisTripletFromArcs(pt p, vec T0, ARC[] opArcs, ARC[] g_arcs) {
   pt[] trip = new pt[3];
 
   for (int ai = 0; ai < opArcs.length; ++ai) {
@@ -185,9 +197,9 @@ pt[] getMedialAxisTripletFromArcs(pt p, vec T0, ARC[] opArcs) {
     if (centerIsRight) r = -opArcs[ai].r;
     
     pt m = getMedialAxis(p, T0, opArcs[ai].center, r);
-    if (isInsideArcs(m) && 
+    if (isInsideArcs(m, g_arcs) && 
         intersectsArc(opArcs[ai].center, V(opArcs[ai].center, m), opArcs[ai]) > 0 && 
-        circleFitsInArcs(C(m, d(p, m)))) {
+        circleFitsInArcs(C(m, d(p, m)), g_arcs)) {
       trip[0] = p;
       trip[1] = m;
       trip[2] = P(opArcs[ai].center, opArcs[ai].r, U(V(opArcs[ai].center, m)));
@@ -203,7 +215,7 @@ pt[] getMedialAxisTripletFromArcs(pt p, vec T0, ARC[] opArcs) {
 // =================================================================================================================
 // UTIL
 // Check if point is inside arc boundary
-boolean isInsideArcs(pt p) {
+boolean isInsideArcs(pt p, ARC[] g_arcs) {
   int intersections = 0;
   for (int i = 0; i < g_arcs.length; ++i) {
     intersections += intersectsArc(p, V(1, 0.5), g_arcs[i]);
@@ -213,12 +225,12 @@ boolean isInsideArcs(pt p) {
 }
 
 // Check if circle fits inside the arc boundary
-boolean circleFitsInArcs(CIRCLE c) {
-  if (!isInsideArcs(c.C)) return false;
+boolean circleFitsInArcs(CIRCLE c, ARC[] g_arcs) {
+  if (!isInsideArcs(c.C, g_arcs)) return false;
   for (int ai = 0; ai < g_arcs.length; ++ai) {
     ARC currArc = g_arcs[ai];
     for (int pi = 0; pi < currArc.arcPoints.nv; ++pi) {
-      if (c.r-0.05 > d(c.C, currArc.arcPoints.G[pi])) {
+      if (c.r-0.08 > d(c.C, currArc.arcPoints.G[pi])) {
         return false;
       }
     }

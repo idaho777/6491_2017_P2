@@ -190,7 +190,8 @@ void arrow(pt P, vec V) {show(P,V);  float n=n(V); if(n<0.01) return; float s=ma
      pt Q=P(P,V); vec U = S(-s,V); vec W = R(S(.3,U)); beginShape(); v(P(P(Q,U),W)); v(Q); v(P(P(Q,U),-1,W)); endShape(CLOSE);}; 
 
 // triangle, polygon
-void v(pt P) {vertex(P.x,P.y);};                                                                     // vertex for drawing polygons between beginShape() and endShape()
+void v(pt P) {vertex(P.x,P.y);};     // vertex for drawing polygons between beginShape() and endShape()
+void v(pt P, float u, float v) {vertex(P.x, P.y, u, v);}
 void show(pt A, pt B, pt C)  {beginShape();  A.v(); B.v(); C.v(); endShape(CLOSE);}                   // render triangle A, B, C
 void show(pt A, pt B, pt C, pt D)  {beginShape();  A.v(); B.v(); C.v(); D.v(); endShape(CLOSE);}      // render quad A, B, C, D
 
